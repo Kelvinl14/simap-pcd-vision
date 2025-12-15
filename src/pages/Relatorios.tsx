@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,15 @@ import {
   Users,
   MapPin,
   FileSpreadsheet,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  generateGeralReport,
+  generateDeficienciaReport,
+  generateRegiaoReport,
+  generateEstatisticoReport,
+} from "@/lib/pdf-export";
 
 const reportTypes = [
   {
@@ -26,24 +35,28 @@ const reportTypes = [
     title: "Relatório Geral",
     description: "Visão completa de todos os cadastros do sistema",
     icon: FileText,
+    generator: generateGeralReport,
   },
   {
     id: "deficiencia",
     title: "Por Tipo de Deficiência",
     description: "Cadastros agrupados por tipo de deficiência",
     icon: Users,
+    generator: generateDeficienciaReport,
   },
   {
     id: "regiao",
     title: "Por Região",
     description: "Distribuição geográfica dos cadastros",
     icon: MapPin,
+    generator: generateRegiaoReport,
   },
   {
     id: "estatistico",
     title: "Estatístico",
     description: "Análise estatística com gráficos e indicadores",
     icon: BarChart3,
+    generator: generateEstatisticoReport,
   },
 ];
 
@@ -54,6 +67,7 @@ const recentReports = [
     type: "Geral",
     date: "01/12/2024",
     size: "2.4 MB",
+    generator: generateGeralReport,
   },
   {
     id: 2,
@@ -61,6 +75,7 @@ const recentReports = [
     type: "Regional",
     date: "28/11/2024",
     size: "1.8 MB",
+    generator: generateRegiaoReport,
   },
   {
     id: 3,
@@ -68,17 +83,62 @@ const recentReports = [
     type: "Estatístico",
     date: "25/11/2024",
     size: "3.2 MB",
+    generator: generateEstatisticoReport,
   },
 ];
 
 export default function Relatorios() {
+  const [selectedType, setSelectedType] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingCardId, setGeneratingCardId] = useState<string | null>(null);
+
+  const handleGenerateReport = async () => {
+    if (!selectedType) {
+      toast.error("Selecione um tipo de relatório");
+      return;
+    }
+
+    setIsGenerating(true);
+    
+    // Simulate loading for better UX
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    try {
+      const report = reportTypes.find((r) => r.id === selectedType);
+      if (report) {
+        report.generator();
+        toast.success(`${report.title} gerado com sucesso!`);
+      }
+    } catch (error) {
+      toast.error("Erro ao gerar relatório");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleQuickGenerate = async (reportId: string, generator: () => void) => {
+    setGeneratingCardId(reportId);
+    
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    try {
+      generator();
+      const report = reportTypes.find((r) => r.id === reportId);
+      toast.success(`${report?.title || "Relatório"} gerado com sucesso!`);
+    } catch (error) {
+      toast.error("Erro ao gerar relatório");
+    } finally {
+      setGeneratingCardId(null);
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       {/* Page Header */}
       <div className="page-header">
         <h1 className="page-title">Relatórios</h1>
         <p className="page-description">
-          Gere e exporte relatórios detalhados do sistema
+          Gere e exporte relatórios detalhados em PDF com gráficos e tabelas
         </p>
       </div>
 
@@ -88,20 +148,26 @@ export default function Relatorios() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {reportTypes.map((report) => {
             const Icon = report.icon;
+            const isLoading = generatingCardId === report.id;
             return (
               <Card
                 key={report.id}
-                className="cursor-pointer transition-all hover:border-primary hover:shadow-md"
+                className="cursor-pointer transition-all hover:border-primary hover:shadow-md group"
+                onClick={() => !isLoading && handleQuickGenerate(report.id, report.generator)}
               >
                 <CardHeader className="pb-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Icon className="h-5 w-5" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    {isLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Icon className="h-5 w-5" />
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
                   <CardTitle className="text-base">{report.title}</CardTitle>
                   <CardDescription className="mt-1 text-sm">
-                    {report.description}
+                    {isLoading ? "Gerando PDF..." : report.description}
                   </CardDescription>
                 </CardContent>
               </Card>
@@ -115,14 +181,14 @@ export default function Relatorios() {
         <CardHeader>
           <CardTitle>Gerar Novo Relatório</CardTitle>
           <CardDescription>
-            Configure os parâmetros para gerar um relatório personalizado
+            Configure os parâmetros para gerar um relatório personalizado em PDF
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="form-group">
               <Label htmlFor="tipo-relatorio">Tipo de Relatório</Label>
-              <Select>
+              <Select value={selectedType} onValueChange={setSelectedType}>
                 <SelectTrigger id="tipo-relatorio">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
@@ -153,25 +219,33 @@ export default function Relatorios() {
 
             <div className="form-group">
               <Label htmlFor="formato">Formato</Label>
-              <Select>
+              <Select defaultValue="pdf">
                 <SelectTrigger id="formato">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pdf">PDF</SelectItem>
-                  <SelectItem value="excel">Excel (.xlsx)</SelectItem>
-                  <SelectItem value="csv">CSV</SelectItem>
+                  <SelectItem value="excel" disabled>Excel (.xlsx) - Em breve</SelectItem>
+                  <SelectItem value="csv" disabled>CSV - Em breve</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button className="gap-2">
-              <Download className="h-4 w-4" />
-              Gerar e Baixar
+            <Button 
+              className="gap-2" 
+              onClick={handleGenerateReport}
+              disabled={isGenerating}
+            >
+              {isGenerating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {isGenerating ? "Gerando..." : "Gerar e Baixar PDF"}
             </Button>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" disabled>
               <Printer className="h-4 w-4" />
               Visualizar Impressão
             </Button>
@@ -206,9 +280,14 @@ export default function Relatorios() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => report.generator()}
+                  >
                     <Download className="h-4 w-4" />
-                    Baixar
+                    Baixar PDF
                   </Button>
                 </div>
               </div>

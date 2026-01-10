@@ -34,7 +34,7 @@ export default function Configuracoes() {
       </div>
 
       <Tabs defaultValue="instituicao" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-none">
+        <TabsList className="inline-flex h-10 w-full items-center justify-start gap-1 sm:w-auto">
           <TabsTrigger value="instituicao" className="gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">Instituição</span>

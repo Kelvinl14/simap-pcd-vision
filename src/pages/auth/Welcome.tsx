@@ -10,8 +10,8 @@ export default function Welcome() {
   const navigate = useNavigate();
   const { markWelcomeAsSeen } = useAuth();
 
-  const handleContinue = () => {
-    markWelcomeAsSeen();
+  const handleContinue = async () => {
+    await markWelcomeAsSeen();
     navigate('/');
   };
 

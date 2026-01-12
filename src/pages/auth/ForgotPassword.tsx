@@ -23,12 +23,12 @@ export default function ForgotPassword() {
     setIsLoading(true);
 
     try {
-      const result = await requestPasswordReset(identifier);
+      const success = await requestPasswordReset(identifier);
       
-      if (result.success) {
+      if (success) {
         navigate('/instrucoes-enviadas');
       } else {
-        setError(result.error || 'Não foi possível enviar as instruções. Verifique os dados informados.');
+        setError('Não foi possível enviar as instruções. Verifique os dados informados.');
       }
     } catch (err) {
       setError('Ocorreu um erro. Tente novamente.');

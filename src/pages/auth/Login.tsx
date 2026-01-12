@@ -33,14 +33,9 @@ export default function Login() {
           title: 'Login realizado com sucesso!',
           description: 'Bem-vindo ao SIMAP-PCD.',
         });
-        
-        if (result.isFirstAccess) {
-          navigate('/bem-vindo');
-        } else {
-          navigate('/');
-        }
+        navigate('/');
       } else {
-        setError(result.error || 'CPF/E-mail ou senha inválidos. Verifique seus dados e tente novamente.');
+        setError('CPF/E-mail ou senha inválidos. Verifique seus dados e tente novamente.');
       }
     } catch (err) {
       setError('Ocorreu um erro ao fazer login. Tente novamente.');

@@ -52,16 +52,16 @@ export default function FirstAccess() {
     setIsLoading(true);
 
     try {
-      const result = await activateAccess({ email, cpf, activationCode, password });
+      const success = await activateAccess({ email, cpf, activationCode, password });
       
-      if (result.success) {
+      if (success) {
         toast({
           title: 'Acesso ativado com sucesso!',
           description: 'Seja bem-vindo ao SIMAP-PCD.',
         });
         navigate('/bem-vindo');
       } else {
-        setError(result.error || 'Não foi possível ativar o acesso. Verifique os dados informados.');
+        setError('Não foi possível ativar o acesso. Verifique os dados informados.');
       }
     } catch (err) {
       setError('Ocorreu um erro. Tente novamente.');

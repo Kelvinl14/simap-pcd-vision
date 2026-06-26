@@ -21,6 +21,10 @@ import Consulta from "./pages/Consulta";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
+import Mapa from "./pages/Mapa";
+import Estatisticas from "./pages/Estatisticas";
+import Usuarios from "./pages/Usuarios";
+import Instituicoes from "./pages/Instituicoes";
 
 const queryClient = new QueryClient();
 
@@ -95,17 +99,7 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <MainLayout>
-                    <div className="animate-fade-in">
-                      <div className="page-header">
-                        <h1 className="page-title">Mapa de PCDs</h1>
-                        <p className="page-description">
-                          Visualização geográfica dos cadastros
-                        </p>
-                      </div>
-                      <div className="flex h-96 items-center justify-center rounded-lg border bg-muted/50">
-                        <p className="text-muted-foreground">Mapa em desenvolvimento</p>
-                      </div>
-                    </div>
+                    <Mapa />
                   </MainLayout>
                 </ProtectedRoute>
               }
@@ -115,17 +109,7 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <MainLayout>
-                    <div className="animate-fade-in">
-                      <div className="page-header">
-                        <h1 className="page-title">Estatísticas</h1>
-                        <p className="page-description">
-                          Análises e indicadores detalhados
-                        </p>
-                      </div>
-                      <div className="flex h-96 items-center justify-center rounded-lg border bg-muted/50">
-                        <p className="text-muted-foreground">Estatísticas em desenvolvimento</p>
-                      </div>
-                    </div>
+                    <Estatisticas />
                   </MainLayout>
                 </ProtectedRoute>
               }
@@ -135,17 +119,7 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <MainLayout>
-                    <div className="animate-fade-in">
-                      <div className="page-header">
-                        <h1 className="page-title">Instituições</h1>
-                        <p className="page-description">
-                          Gestão de instituições parceiras
-                        </p>
-                      </div>
-                      <div className="flex h-96 items-center justify-center rounded-lg border bg-muted/50">
-                        <p className="text-muted-foreground">Módulo em desenvolvimento</p>
-                      </div>
-                    </div>
+                    <Instituicoes />
                   </MainLayout>
                 </ProtectedRoute>
               }
@@ -155,17 +129,7 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <MainLayout>
-                    <div className="animate-fade-in">
-                      <div className="page-header">
-                        <h1 className="page-title">Usuários</h1>
-                        <p className="page-description">
-                          Gerenciamento de usuários do sistema
-                        </p>
-                      </div>
-                      <div className="flex h-96 items-center justify-center rounded-lg border bg-muted/50">
-                        <p className="text-muted-foreground">Módulo em desenvolvimento</p>
-                      </div>
-                    </div>
+                    <Usuarios />
                   </MainLayout>
                 </ProtectedRoute>
               }

@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Logo } from "../logo";
 
 const navigationItems = [
   {
@@ -66,8 +67,8 @@ export function AppSidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center border-b border-sidebar-border px-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Accessibility className="h-6 w-6 text-sidebar-primary-foreground" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white">
+            <Logo />
           </div>
           {!collapsed && (
             <div className="animate-fade-in">

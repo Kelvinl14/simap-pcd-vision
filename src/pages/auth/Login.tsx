@@ -71,6 +71,10 @@ export default function Login() {
               <Label htmlFor="identifier" className="text-sm font-medium">
                 CPF ou E-mail Institucional
               </Label>
+              {/* <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Info className="h-3 w-3" />
+                <span>Digite seu CPF sem pontos ou traços</span>
+              </div> */}
               <Input
                 id="identifier"
                 type="text"
@@ -80,10 +84,6 @@ export default function Login() {
                 className="h-11"
                 required
               />
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Info className="h-3 w-3" />
-                <span>Digite seu CPF sem pontos ou traços</span>
-              </div>
             </div>
 
             <div className="space-y-2">
@@ -99,10 +99,10 @@ export default function Login() {
                 className="h-11"
                 required
               />
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {/* <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Info className="h-3 w-3" />
                 <span>Sua senha é a mesma cadastrada pela Secretaria</span>
-              </div>
+              </div> */}
             </div>
 
             <Button

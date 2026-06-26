@@ -112,10 +112,10 @@ export default function FirstAccess() {
               <Label htmlFor="cpf" className="text-sm font-medium">
                 CPF
               </Label>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+              {/* <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
                 <Info className="h-3 w-3" />
                 <span>Digite apenas os números do seu CPF (11 dígitos)</span>
-              </div>
+              </div> */}
               <Input
                 id="cpf"
                 type="text"
@@ -153,7 +153,7 @@ export default function FirstAccess() {
               </Label>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
                 <Info className="h-3 w-3" />
-                <span>Use pelo menos 6 caracteres. Recomendamos letras e números para mais segurança</span>
+                <span>Use pelo menos 6 caracteres. Com letras e números</span>
               </div>
               <div className="relative">
                 <Input
@@ -208,7 +208,16 @@ export default function FirstAccess() {
             </Button>
           </form>
 
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex flex-col items-center gap-6">
+            <div className="flex items-center justify-center gap-2 w-full h-px bg-muted">
+              <p className="text-sm text-muted-foreground">
+                Não tem o Código de Ativação?
+              </p>
+              <a href="/contact" className="text-sm text-primary hover:underline">
+                Contate a Secretaria
+              </a>
+            </div>
+            
             <Link
               to="/login"
               className="text-sm text-primary hover:underline"

@@ -16,6 +16,10 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ sidebarCollapsed = false }: AppHeaderProps) {
+  const dataUser = localStorage.getItem("simap_user");
+  const nameUser = dataUser ? JSON.parse(dataUser).name : "Usuário";
+  const emailUser = dataUser ? JSON.parse(dataUser).email : "email@example.com";
+
   return (
     <header
       className="fixed right-0 top-0 z-30 flex h-16 items-center justify-between border-b bg-card px-6 transition-all duration-300"
@@ -61,17 +65,22 @@ export function AppHeader({ sidebarCollapsed = false }: AppHeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="ml-2 flex items-center gap-3 px-2 hover:bg-muted"
+              className="ml-2 flex items-center gap-3 px-2 bg-transparent
+              hover:bg-transparent
+              focus:bg-transparent
+              active:bg-transparent
+              focus-visible:ring-0
+              focus-visible:ring-offset-0"
               aria-label="Menu do usuário"
             >
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  MS
+                  {nameUser.charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden text-left md:block">
-                <p className="text-sm font-medium">Maria Silva</p>
-                <p className="text-xs text-muted-foreground">Coordenadora</p>
+                <p className="text-sm font-medium text-foreground">{nameUser}</p>
+                <p className="text-xs text-muted-foreground">{emailUser}</p>
               </div>
             </Button>
           </DropdownMenuTrigger>
@@ -87,7 +96,13 @@ export function AppHeader({ sidebarCollapsed = false }: AppHeaderProps) {
               <span>Configurações</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive">
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => {
+                localStorage.removeItem("simap_user");
+                window.location.href = "/login";
+              }}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               <span>Sair</span>
             </DropdownMenuItem>

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Search,
@@ -20,88 +21,28 @@ import {
   ChevronLeft,
   ChevronRight,
   MoreHorizontal,
+  Trash2,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "@/hooks/use-toast";
+import { pcdService, Pcd, DisabilityType } from "@/services/pcd.service";
+import { generatePDFReport } from "@/lib/pdf-export";
+import autoTable from "jspdf-autotable";
 
-const mockData = [
-  {
-    id: 1,
-    nome: "João Carlos Santos",
-    cpf: "123.456.789-12",
-    deficiencia: "Física",
-    regiao: "Centro",
-    status: "ativo",
-    cadastro: "15/01/2024",
-  },
-  {
-    id: 2,
-    nome: "Ana Maria Oliveira",
-    cpf: "234.567.890-23",
-    deficiencia: "Visual",
-    regiao: "Norte",
-    status: "ativo",
-    cadastro: "20/02/2024",
-  },
-  {
-    id: 3,
-    nome: "Pedro Henrique Lima",
-    cpf: "345.678.901-34",
-    deficiencia: "Auditiva",
-    regiao: "Sul",
-    status: "pendente",
-    cadastro: "10/03/2024",
-  },
-  {
-    id: 4,
-    nome: "Mariana Costa Silva",
-    cpf: "456.789.012-45",
-    deficiencia: "Intelectual",
-    regiao: "Leste",
-    status: "ativo",
-    cadastro: "05/04/2024",
-  },
-  {
-    id: 5,
-    nome: "Carlos Eduardo Reis",
-    cpf: "567.890.123-56",
-    deficiencia: "Múltipla",
-    regiao: "Oeste",
-    status: "inativo",
-    cadastro: "12/05/2024",
-  },
-  {
-    id: 6,
-    nome: "Fernanda Souza Lima",
-    cpf: "678.901.234-67",
-    deficiencia: "TEA",
-    regiao: "Centro",
-    status: "ativo",
-    cadastro: "18/06/2024",
-  },
-  {
-    id: 7,
-    nome: "Ricardo Almeida Santos",
-    cpf: "789.012.345-78",
-    deficiencia: "Física",
-    regiao: "Rural",
-    status: "pendente",
-    cadastro: "25/07/2024",
-  },
-  {
-    id: 8,
-    nome: "Juliana Martins Costa",
-    cpf: "890.123.456-89",
-    deficiencia: "Visual",
-    regiao: "Norte",
-    status: "ativo",
-    cadastro: "01/08/2024",
-  },
-];
+const labelMap: Record<string, string> = {
+  FISICA: "Física",
+  VISUAL: "Visual",
+  AUDITIVA: "Auditiva",
+  INTELECTUAL: "Intelectual",
+  MULTIPLA: "Múltipla",
+  PSICOSSOCIAL: "Psicossocial",
+};
 
 const statusConfig = {
   ativo: { label: "Ativo", className: "bg-success/10 text-success border-success/20" },
@@ -109,15 +50,130 @@ const statusConfig = {
   inativo: { label: "Inativo", className: "bg-muted text-muted-foreground border-muted" },
 };
 
+type PatientFilters = {
+  page: number;
+  limit: number;
+  search?: string;
+  disabilityType?: DisabilityType;
+  city?: string;
+};
+
 export default function Consulta() {
+  const navigate = useNavigate();
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [pcds, setPcds] = useState<Pcd[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Estados de paginação e filtros
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [filterDisability, setFilterDisability] = useState<string>("todos");
+  const [filterCity, setFilterCity] = useState<string>("todas");
 
-  const filteredData = mockData.filter(
-    (item) =>
-      item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.cpf.includes(searchTerm)
-  );
+  const fetchPcds = async () => {
+    setIsLoading(true);
+    try {
+      const filters: PatientFilters = {
+        page: currentPage,
+        limit: 8,
+      };
+
+      if (searchTerm) {
+        filters.search = searchTerm;
+      }
+
+      if (filterDisability !== "todos") {
+        filters.disabilityType = filterDisability as DisabilityType;
+      }
+
+      if (filterCity !== "todas") {
+        filters.city = filterCity;
+      }
+
+      const response = await pcdService.findAll(filters);
+      setPcds(response.data);
+      setTotalPages(response.meta.totalPages);
+      setTotalCount(response.meta.total);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Erro de comuninicação.";
+      toast({
+        title: "Erro ao buscar dados",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchPcds();
+    }, 400);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, currentPage, filterDisability, filterCity]);
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Tem certeza que deseja excluir permanentemente este cadastro de PCD?")) {
+      try {
+        await pcdService.remove(id);
+        toast({
+          title: "Cadastro excluído",
+          description: "O registro de PCD foi removido com sucesso.",
+        });
+        fetchPcds();
+      } catch (error: unknown) {
+        const message =
+        error instanceof Error
+          ? error.message
+          : "Erro não foi possivel remover";
+        toast({
+          title: "Erro ao excluir",
+          description: message,
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleExport = (pcd: Pcd) => {
+    const doc = generatePDFReport({
+      title: `Ficha Cadastral - ${pcd.name}`,
+      subtitle: `CPF: ${pcd.cpf}`,
+      type: "geral",
+    });
+
+    const defStr = pcd.disabilities
+      .map((d) => `${labelMap[d.type]} (CID: ${d.cid || "N/A"})`)
+      .join(", ");
+
+    autoTable(doc, {
+      startY: ((doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 60) + 20,
+      head: [["Campo", "Informação"]],
+      body: [
+        ["Nome Completo", pcd.name],
+        ["CPF", pcd.cpf],
+        ["CNS", pcd.cns || "N/A"],
+        ["Data de Nascimento", pcd.birthDate ? new Date(pcd.birthDate).toLocaleDateString('pt-BR') : "N/A"],
+        ["Sexo", pcd.sex || "N/A"],
+        ["Telefone", pcd.phone || "N/A"],
+        ["E-mail", pcd.email || "N/A"],
+        ["Deficiência", defStr],
+        ["Endereço", `${pcd.street || ""}, ${pcd.number || ""}, ${pcd.neighborhood || ""}`],
+        ["Cidade/UF", `${pcd.city} / ${pcd.state}`],
+        ["Instituição Vinculada", pcd.institution?.name || "N/A"],
+        ["Observações", pcd.observations || "N/A"],
+      ],
+    });
+
+    doc.save(`ficha-${pcd.name.toLowerCase().replace(/ /g, "-")}.pdf`);
+  };
 
   return (
     <div className="animate-fade-in">
@@ -139,7 +195,10 @@ export default function Consulta() {
                 placeholder="Buscar por nome ou CPF..."
                 className="pl-9"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // Reseta para primeira página na busca
+                }}
               />
             </div>
             <Button
@@ -149,80 +208,56 @@ export default function Consulta() {
             >
               <Filter className="h-4 w-4" />
               Filtros
-              {showFilters && <Badge variant="secondary">3</Badge>}
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              Exportar
+              {(filterDisability !== "todos" || filterCity !== "todas") && (
+                <Badge variant="secondary">Ativo</Badge>
+              )}
             </Button>
           </div>
 
           {/* Expanded Filters */}
           {showFilters && (
-            <div className="mt-4 grid gap-4 border-t pt-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-4 grid gap-4 border-t pt-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="form-group">
                 <Label htmlFor="filter-deficiencia">Tipo de Deficiência</Label>
-                <Select>
+                <Select
+                  value={filterDisability}
+                  onValueChange={(v) => {
+                    setFilterDisability(v);
+                    setCurrentPage(1);
+                  }}
+                >
                   <SelectTrigger id="filter-deficiencia">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="fisica">Física</SelectItem>
-                    <SelectItem value="visual">Visual</SelectItem>
-                    <SelectItem value="auditiva">Auditiva</SelectItem>
-                    <SelectItem value="intelectual">Intelectual</SelectItem>
-                    <SelectItem value="multipla">Múltipla</SelectItem>
-                    <SelectItem value="tea">TEA</SelectItem>
+                    <SelectItem value="FISICA">Física</SelectItem>
+                    <SelectItem value="VISUAL">Visual</SelectItem>
+                    <SelectItem value="AUDITIVA">Auditiva</SelectItem>
+                    <SelectItem value="INTELECTUAL">Intelectual</SelectItem>
+                    <SelectItem value="MULTIPLA">Múltipla</SelectItem>
+                    <SelectItem value="PSICOSSOCIAL">Psicossocial</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="form-group">
-                <Label htmlFor="filter-regiao">Região</Label>
-                <Select>
+                <Label htmlFor="filter-regiao">Cidade</Label>
+                <Select
+                  value={filterCity}
+                  onValueChange={(v) => {
+                    setFilterCity(v);
+                    setCurrentPage(1);
+                  }}
+                >
                   <SelectTrigger id="filter-regiao">
                     <SelectValue placeholder="Todas" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todas">Todas</SelectItem>
-                    <SelectItem value="centro">Centro</SelectItem>
-                    <SelectItem value="norte">Norte</SelectItem>
-                    <SelectItem value="sul">Sul</SelectItem>
-                    <SelectItem value="leste">Leste</SelectItem>
-                    <SelectItem value="oeste">Oeste</SelectItem>
-                    <SelectItem value="rural">Rural</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="form-group">
-                <Label htmlFor="filter-status">Status</Label>
-                <Select>
-                  <SelectTrigger id="filter-status">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="ativo">Ativo</SelectItem>
-                    <SelectItem value="pendente">Pendente</SelectItem>
-                    <SelectItem value="inativo">Inativo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="form-group">
-                <Label htmlFor="filter-periodo">Período de Cadastro</Label>
-                <Select>
-                  <SelectTrigger id="filter-periodo">
-                    <SelectValue placeholder="Todo período" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todo período</SelectItem>
-                    <SelectItem value="7dias">Últimos 7 dias</SelectItem>
-                    <SelectItem value="30dias">Últimos 30 dias</SelectItem>
-                    <SelectItem value="90dias">Últimos 90 dias</SelectItem>
-                    <SelectItem value="1ano">Último ano</SelectItem>
+                    <SelectItem value="Teresina">Teresina</SelectItem>
+                    <SelectItem value="Caxias">Caxias</SelectItem>
+                    <SelectItem value="Timon">Timon</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -236,98 +271,134 @@ export default function Consulta() {
         <CardHeader className="border-b">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">
-              Resultados ({filteredData.length} registros)
+              Resultados ({totalCount} registros)
             </CardTitle>
           </div>
         </CardHeader>
         <div className="overflow-x-auto">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th scope="col">Nome</th>
-                <th scope="col">CPF</th>
-                <th scope="col">Deficiência</th>
-                <th scope="col">Região</th>
-                <th scope="col">Status</th>
-                <th scope="col">Cadastro</th>
-                <th scope="col" className="w-12">
-                  <span className="sr-only">Ações</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.map((item) => {
-                const status = statusConfig[item.status as keyof typeof statusConfig];
-                return (
-                  <tr key={item.id}>
-                    <td className="font-medium">{item.nome}</td>
-                    <td className="font-mono text-muted-foreground">{item.cpf}</td>
-                    <td>{item.deficiencia}</td>
-                    <td>{item.regiao}</td>
-                    <td>
-                      <Badge variant="outline" className={status.className}>
-                        {status.label}
-                      </Badge>
-                    </td>
-                    <td className="text-muted-foreground">{item.cadastro}</td>
-                    <td>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            aria-label={`Ações para ${item.nome}`}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Visualizar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Download className="mr-2 h-4 w-4" />
-                            Exportar PDF
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+          {isLoading ? (
+            <div className="text-center py-10 text-muted-foreground">Buscando cadastros de PCDs...</div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Nome</th>
+                  <th scope="col">CPF</th>
+                  <th scope="col">Deficiência</th>
+                  <th scope="col">Cidade</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Cadastro</th>
+                  <th scope="col" className="w-12">
+                    <span className="sr-only">Ações</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {pcds.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-10 text-muted-foreground">
+                      Nenhuma pessoa cadastrada ou correspondente aos filtros.
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                ) : (
+                  pcds.map((item) => {
+                    const status = statusConfig["ativo"]; // No MVP as PCDs salvas estão ativas
+                    const defType = item.disabilities[0]?.type;
+                    const defLabel = labelMap[defType] || defType || "Não Informado";
+                    const dateStr = new Date(item.createdAt).toLocaleDateString('pt-BR');
+
+                    return (
+                      <tr key={item.id}>
+                        <td className="font-medium">{item.name}</td>
+                        <td className="font-mono text-muted-foreground">{item.cpf}</td>
+                        <td>{defLabel}</td>
+                        <td>{item.city}</td>
+                        <td>
+                          <Badge variant="outline" className={status.className}>
+                            {status.label}
+                          </Badge>
+                        </td>
+                        <td className="text-muted-foreground">{dateStr}</td>
+                        <td>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                aria-label={`Ações para ${item.name}`}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-popover">
+                              <DropdownMenuItem onClick={() => handleExport(item)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Visualizar Ficha (PDF)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate(`/cadastro?id=${item.id}`)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={() => handleDelete(item.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between border-t px-4 py-3">
-          <p className="text-sm text-muted-foreground">
-            Mostrando 1-8 de {filteredData.length} registros
-          </p>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" disabled aria-label="Página anterior">
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" className="bg-primary text-primary-foreground">
-              1
-            </Button>
-            <Button variant="outline" size="sm">
-              2
-            </Button>
-            <Button variant="outline" size="sm">
-              3
-            </Button>
-            <Button variant="outline" size="icon" aria-label="Próxima página">
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t px-4 py-3">
+            <p className="text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                disabled={currentPage === 1} 
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                aria-label="Página anterior"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <Button 
+                  key={i} 
+                  variant="outline" 
+                  size="sm" 
+                  className={currentPage === i + 1 ? "bg-primary text-primary-foreground" : ""}
+                  onClick={() => setCurrentPage(i + 1)}
+                >
+                  {i + 1}
+                </Button>
+              ))}
+              <Button 
+                variant="outline" 
+                size="icon" 
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                aria-label="Próxima página"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </Card>
     </div>
   );

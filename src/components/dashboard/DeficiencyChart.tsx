@@ -1,14 +1,67 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+//import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
-const data = [
-  { name: "Física", value: 1245, color: "hsl(215, 70%, 35%)" },
-  { name: "Visual", value: 856, color: "hsl(160, 60%, 35%)" },
-  { name: "Auditiva", value: 634, color: "hsl(280, 50%, 45%)" },
-  { name: "Intelectual", value: 423, color: "hsl(40, 90%, 50%)" },
-  { name: "Múltipla", value: 298, color: "hsl(0, 70%, 50%)" },
-];
+import { useEffect, useState } from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { dashboardService } from "@/services/dashboard.service";
+
+const colorMap: Record<string, string> = {
+  FISICA: "hsl(215, 70%, 35%)",
+  VISUAL: "hsl(160, 60%, 35%)",
+  AUDITIVA: "hsl(280, 50%, 45%)",
+  INTELECTUAL: "hsl(40, 90%, 50%)",
+  MULTIPLA: "hsl(0, 70%, 50%)",
+  PSICOSSOCIAL: "hsl(340, 60%, 45%)",
+};
+
+const labelMap: Record<string, string> = {
+  FISICA: "Física",
+  VISUAL: "Visual",
+  AUDITIVA: "Auditiva",
+  INTELECTUAL: "Intelectual",
+  MULTIPLA: "Múltipla",
+  PSICOSSOCIAL: "Psicossocial",
+};
 
 export function DeficiencyChart() {
+  const [chartData, setChartData] = useState<Array<{ name: string; value: number; color: string }>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDisabilities = async () => {
+      try {
+        const rawData = await dashboardService.getByDisability();
+        const formatted = rawData.map((d) => ({
+          name: labelMap[d.type] || d.type,
+          value: d.count,
+          color: colorMap[d.type] || "hsl(200, 50%, 50%)",
+        }));
+        setChartData(formatted);
+      } catch (error) {
+        console.error("Erro ao carregar distribuição de deficiências:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDisabilities();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border bg-card p-4 flex flex-col justify-center items-center h-[372px]">
+        <span className="text-muted-foreground">Carregando dados...</span>
+      </div>
+    );
+  }
+
+  if (chartData.length === 0) {
+    return (
+      <div className="rounded-lg border bg-card p-4 flex flex-col justify-center items-center h-[372px]">
+        <span className="text-muted-foreground">Nenhum dado cadastrado.</span>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg border bg-card p-4">
       <div className="mb-4">
@@ -21,7 +74,7 @@ export function DeficiencyChart() {
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={data}
+              data={chartData}
               cx="50%"
               cy="50%"
               innerRadius={60}
@@ -29,7 +82,7 @@ export function DeficiencyChart() {
               paddingAngle={2}
               dataKey="value"
             >
-              {data.map((entry, index) => (
+              {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>

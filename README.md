@@ -1,73 +1,90 @@
-# Welcome to your Lovable project
+# SIMAP-PCD Vision
 
-## Project info
+Sistema para gestão e visualização de dados de pessoas com deficiência (PCD).
 
-**URL**: https://lovable.dev/projects/09167dee-c288-4de2-b8fc-a574d125efc3
+## Tecnologias Utilizadas
 
-## How can I edit this code?
+O projeto é construído com:
 
-There are several ways of editing your application.
+- **React 18** - Framework frontend
+- **TypeScript** - Tipagem estática
+- **Vite** - Ferramenta de build e dev server
+- **shadcn/ui** - Componentes UI
+- **Tailwind CSS** - Estilização
+- **React Router** - Roteamento
+- **React Query** - Gerenciamento de estado de servidor
+- **React Hook Form** - Formulários
+- **Zod** - Validação de schemas
+- **Axios** - Cliente HTTP
+- **Leaflet / React Leaflet** - Mapa interativo
+- **Recharts** - Gráficos
+- **jsPDF / jsPDF-AutoTable** - Exportação de relatórios em PDF
+- **Lucide React** - Ícones
 
-**Use Lovable**
+## Funcionalidades
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/09167dee-c288-4de2-b8fc-a574d125efc3) and start prompting.
+- **Autenticação**: Login, recuperação de senha e primeiro acesso
+- **Dashboard**: Visão geral com estatísticas e gráficos
+- **Cadastro**: Registro de PCDs
+- **Consulta**: Pesquisa e filtro de registros
+- **Mapa**: Visualização geográfica dos dados
+- **Estatísticas**: Análises detalhadas com gráficos
+- **Relatórios**: Geração de relatórios em PDF
+- **Gestão**: Administração de usuários e instituições
+- **Configurações**: Personalização do sistema
 
-Changes made via Lovable will be committed automatically to this repo.
+## Como rodar o projeto
 
-**Use your preferred IDE**
+### Pré-requisitos
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Node.js (versão LTS recomendada)
+- npm ou bun
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Passo a passo
 
-Follow these steps:
+1. **Instalar dependências**
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm install
+# ou
+bun install
 ```
 
-**Edit a file directly in GitHub**
+2. **Configurar variáveis de ambiente**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Crie/edite o arquivo `.env` na raiz do projeto com as configurações necessárias.
 
-**Use GitHub Codespaces**
+3. **Iniciar o servidor de desenvolvimento**
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```sh
+npm run dev
+# ou
+bun dev
+```
 
-## What technologies are used for this project?
+O aplicativo estará disponível em `http://localhost:5173`.
 
-This project is built with:
+## Scripts disponíveis
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- `npm run dev` - Inicia o servidor de desenvolvimento
+- `npm run build` - Cria a build de produção
+- `npm run build:dev` - Cria a build de desenvolvimento
+- `npm run lint` - Executa o ESLint
+- `npm run preview` - Visualiza a build de produção localmente
 
-## How can I deploy this project?
+## Estrutura do projeto
 
-Simply open [Lovable](https://lovable.dev/projects/09167dee-c288-4de2-b8fc-a574d125efc3) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```
+src/
+├── components/
+│   ├── auth/         # Componentes de autenticação
+│   ├── dashboard/    # Componentes do dashboard
+│   ├── layout/       # Componentes de layout
+│   └── ui/           # Componentes shadcn/ui
+├── contexts/         # Contextos React (AuthContext)
+├── hooks/            # Hooks personalizados
+├── lib/              # Utilitários (PDF export, utils)
+├── pages/            # Páginas da aplicação
+│   └── auth/         # Páginas de autenticação
+└── services/         # Serviços de API
+```

@@ -20,6 +20,13 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('expired') === 'true') {
+      setError('Sessão expirada. Por favor, faça login novamente.');
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -35,9 +42,9 @@ export default function Login() {
         });
         navigate('/');
       } else {
-        setError('CPF/E-mail ou senha inválidos. Verifique seus dados e tente novamente.');
+        setError(result.error || 'E-mail ou senha inválidos. Verifique seus dados e tente novamente.');
       }
-    } catch (err) {
+    } catch (err: any) {
       setError('Ocorreu um erro ao fazer login. Tente novamente.');
     } finally {
       setIsLoading(false);

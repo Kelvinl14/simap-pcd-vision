@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -93,23 +93,162 @@ const MOCK_INSTITUTIONS = [
   },
 ];
 
+
+import { institutionsService, Institution } from "@/services/institutions.service";
+
 const Instituicoes = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredData = MOCK_INSTITUTIONS.filter((item) =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.region.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Estados do formulário
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    cnpj: "",
+    type: "ong",
+    address: "",
+    region: "centro",
+    contact: "",
+    responsible: "",
+    email: "",
+  });
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsDialogOpen(false);
-    toast({
-      title: "Instituição salva",
-      description: "Os dados foram atualizados com sucesso.",
+  const fetchInstitutions = async () => {
+    setIsLoading(true);
+    try {
+      const data = await institutionsService.findAll();
+      setInstitutions(data);
+    } catch (error: unknown) {
+       const message =
+        error instanceof Error
+          ? error.message
+          : "Erro ao carregar instituições.";
+      toast({
+        title: "Erro",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInstitutions();
+  }, []);
+
+  const filteredData = institutions.filter((item) => {
+    const term = searchTerm.toLowerCase();
+    const isNameMatch = item.name.toLowerCase().includes(term);
+    const isCnpjMatch = item.cnpj.includes(term);
+    const isRegionMatch = (item.neighborhood || "").toLowerCase().includes(term);
+    const isCityMatch = (item.city || "").toLowerCase().includes(term);
+    
+    return isNameMatch || isCnpjMatch || isRegionMatch || isCityMatch;
+  });
+
+  const handleOpenCreate = () => {
+    setEditingId(null);
+    setFormData({
+      name: "",
+      cnpj: "",
+      type: "ong",
+      address: "",
+      region: "centro",
+      contact: "",
+      responsible: "",
+      email: "",
     });
+    setIsDialogOpen(true);
+  };
+
+  const handleOpenEdit = (inst: Institution) => {
+    setEditingId(inst.id);
+    setFormData({
+      name: inst.name,
+      cnpj: inst.cnpj,
+      type: inst.name.toLowerCase().includes("escola") ? "educacao" : inst.name.toLowerCase().includes("caps") ? "saude" : "ong",
+      address: inst.street || "",
+      region: inst.neighborhood?.toLowerCase() || "centro",
+      contact: inst.phone || "",
+      responsible: inst.responsible || "",
+      email: inst.email || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        name: formData.name,
+        cnpj: formData.cnpj,
+        phone: formData.contact || undefined,
+        email: formData.email || undefined,
+        street: formData.address || undefined,
+        neighborhood: formData.region,
+        city: "Teresina", // Cidades do seed padrão
+        state: "PI",
+        responsible: formData.responsible || undefined,
+      };
+
+      if (editingId) {
+        await institutionsService.update(editingId, payload);
+        toast({
+          title: "Instituição atualizada",
+          description: "Os dados foram atualizados com sucesso.",
+        });
+      } else {
+        await institutionsService.create(payload);
+        toast({
+          title: "Instituição cadastrada",
+          description: "Instituição parceira salva com sucesso.",
+        });
+      }
+      setIsDialogOpen(false);
+      fetchInstitutions();
+    } catch (error: unknown) {
+       const message =
+        error instanceof Error
+          ? error.message
+          : "Erro ao conectar com a API.";
+      toast({
+        title: "Erro ao salvar",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeactivate = async (id: string) => {
+    try {
+      await institutionsService.remove(id);
+      toast({
+        title: "Instituição desativada",
+        description: "Status alterado para inativo.",
+      });
+      fetchInstitutions();
+    } catch (error: unknown) {
+       const message =
+        error instanceof Error
+          ? error.message
+          : "Não foi possível desativar.";
+      toast({
+        title: "Erro",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Mapeia o tipo para renderização com base no nome
+  const getInstTypeLabel = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes("escola") || n.includes("educa")) return "Educação";
+    if (n.includes("caps") || n.includes("ubs") || n.includes("saude")) return "Saúde";
+    return "ONG/Associação";
   };
 
   return (
@@ -121,7 +260,7 @@ const Instituicoes = () => {
             Gerenciamento de instituições parceiras e unidades de atendimento.
           </p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
+        <Button onClick={handleOpenCreate}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Instituição
         </Button>
@@ -148,149 +287,189 @@ const Instituicoes = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Região</TableHead>
-                <TableHead>Contatos</TableHead>
-                <TableHead className="text-center">Cadastros</TableHead>
-                <TableHead className="text-center">Relatórios</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredData.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      {item.name}
-                    </div>
-                  </TableCell>
-                  <TableCell>{item.type}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
-                      {item.region}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Phone className="h-3 w-3" />
-                      {item.contact}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="secondary" className="gap-1">
-                      <Users className="h-3 w-3" />
-                      {item.registrations}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="outline" className="gap-1">
-                      <FileText className="h-3 w-3" />
-                      {item.reports}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={item.status === "active" ? "default" : "secondary"}>
-                      {item.status === "active" ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Abrir menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => setIsDialogOpen(true)}>
-                          Editar detalhes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>Ver cadastros vinculados</DropdownMenuItem>
-                        <DropdownMenuItem>Relatórios enviados</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
-                          Desativar instituição
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          {isLoading ? (
+            <div className="text-center py-6 text-muted-foreground">Carregando instituições parceiras...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>CNPJ</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Região</TableHead>
+                  <TableHead>Contatos</TableHead>
+                  <TableHead className="text-center">Cadastros</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      Nenhuma instituição encontrada.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredData.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          {item.name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{item.cnpj}</TableCell>
+                      <TableCell>{getInstTypeLabel(item.name)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <MapPin className="h-3 w-3" />
+                          {item.neighborhood || item.city}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Phone className="h-3 w-3" />
+                          {item.phone || item.email || "N/A"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary" className="gap-1">
+                          <Users className="h-3 w-3" />
+                          {item._count?.pcds || 0}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={item.active ? "default" : "secondary"}>
+                          {item.active ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Abrir menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleOpenEdit(item)}>
+                              Editar detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleDeactivate(item.id)}
+                            >
+                              Desativar instituição
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Cadastro de Instituição</DialogTitle>
+            <DialogTitle>{editingId ? "Editar Instituição" : "Cadastro de Instituição"}</DialogTitle>
             <DialogDescription>
-              Preencha os dados da nova instituição parceira.
+              Preencha os dados da instituição parceira no sistema.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSave}>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome da Instituição</Label>
-                  <Input id="name" placeholder="Ex: APAE Centro" required />
+                  <Label htmlFor="name">Nome da Instituição *</Label>
+                  <Input 
+                    id="name" 
+                    placeholder="Ex: APAE Centro" 
+                    required 
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="type">Tipo</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="saude">Saúde (CAPS/UBS)</SelectItem>
-                      <SelectItem value="educacao">Educação (Escola)</SelectItem>
-                      <SelectItem value="ong">ONG/Associação</SelectItem>
-                      <SelectItem value="outros">Outros</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="cnpj">CNPJ *</Label>
+                  <Input 
+                    id="cnpj" 
+                    placeholder="12.345.678/0001-99" 
+                    required 
+                    value={formData.cnpj}
+                    onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail</Label>
+                  <Input 
+                    id="email" 
+                    type="email"
+                    placeholder="contato@instituicao.org" 
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact">Telefone de Contato</Label>
+                  <Input 
+                    id="contact" 
+                    placeholder="(86) 3221-0000" 
+                    value={formData.contact}
+                    onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+                  />
                 </div>
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="address">Endereço Completo</Label>
-                <Input id="address" placeholder="Rua, Número, Bairro" />
+                <Input 
+                  id="address" 
+                  placeholder="Rua, Número" 
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="region">Região</Label>
-                  <Select>
+                  <Label htmlFor="region">Região (Bairro)</Label>
+                  <Select 
+                    value={formData.region}
+                    onValueChange={(v) => setFormData({ ...formData, region: v })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="centro">Centro</SelectItem>
-                      <SelectItem value="norte">Zona Norte</SelectItem>
-                      <SelectItem value="sul">Zona Sul</SelectItem>
-                      <SelectItem value="leste">Zona Leste</SelectItem>
-                      <SelectItem value="oeste">Zona Oeste</SelectItem>
-                      <SelectItem value="rural">Zona Rural</SelectItem>
+                      <SelectItem value="zona norte">Zona Norte</SelectItem>
+                      <SelectItem value="zona sul">Zona Sul</SelectItem>
+                      <SelectItem value="zona leste">Zona Leste</SelectItem>
+                      <SelectItem value="zona oeste">Zona Oeste</SelectItem>
+                      <SelectItem value="zona rural">Zona Rural</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="contact">Telefone de Contato</Label>
-                  <Input id="contact" placeholder="(99) 0000-0000" />
+                  <Label htmlFor="responsible">Responsável Técnico</Label>
+                  <Input 
+                    id="responsible" 
+                    placeholder="Nome do responsável" 
+                    value={formData.responsible}
+                    onChange={(e) => setFormData({ ...formData, responsible: e.target.value })}
+                  />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="responsible">Responsável Técnico</Label>
-                <Input id="responsible" placeholder="Nome do responsável" />
               </div>
             </div>
             <DialogFooter>
